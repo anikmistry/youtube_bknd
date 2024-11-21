@@ -4,6 +4,20 @@ import { User } from "../models/user.models.js"
 import { uploadCloudinary } from "../utils/cloudinary.js";
 import { apiResponse } from "../utils/apiResponse.js";
 
+const generateAccessAndRefereshTokens = async(userId) =>
+{
+    try {
+        const user = await User.findOne(userId)
+        const accessToken = user.generateAccessToken()
+        const refereshToken = user.generateRefreshToken()
+        user.refereshToken = refereshToken
+        await user.save({ validateBeforeSave : false })
+        return {accessToken, refereshToken}
+    } catch (error) {
+        throw new apiError(500,"your are fucked up while generating access token and referesh token")
+    }
+}
+
 const registerUser = asyncHandler( async (req, res) =>{
     //get user deatails from frontend
     //validation - not empy
@@ -62,6 +76,77 @@ const registerUser = asyncHandler( async (req, res) =>{
     
 })
 
+const loginUser = asyncHandler(async (req,res) =>{
+    //get email/username and password from frontend
+    //validation(this user is register or not)
+    //check password
+    //create access token and refresh token
+    //send cookie
+    const {email,username,password} = req.body;
+    if(!email || !username){
+        throw new apiError(400,"Email or username is require")
+    }
+    const user = await User.findOne({
+        $or: [{email},{username}]
+    })
+    if(!user) throw new apiError(404,"user does not exist");
+
+    const isPasswordValid = await user.isPasswordCorrecta(password)
+    if(!isPasswordValid) throw new apiError(401,"Invalid user password");
+
+    const {accessToken, refereshToken} = await generateAccessAndRefereshTokens(user._id)
+
+    const loggedInUser = await User.findById(user._id).select("-password -refreshToken")
+
+    const options = {
+        httpOnly: true,
+        secure: true
+    }
+
+    return res
+    .status(200)
+    .cookie("accessToken",accessToken, options)
+    .cookie("refereshToken", refereshToken, options)
+    .json(
+        new apiResponse(
+            200,
+            {
+                user: loggedInUser,accessToken,refereshToken
+            },
+            "user loggedIn successfully"
+        )
+    )
+    
+})
+
+const logoutUser = asyncHandler(async(req,res) =>{
+    await User.findByIdUpdate(
+        req.user._id,
+        {
+            $unset: {
+                refereshToken: 1
+            }
+        },
+        {
+            new: true
+        }
+    )
+    const options = {
+        httpOnly: true,
+        secure: true
+    }
+
+    return res
+    .status(200)
+    .clearCookie("accessToken", options)
+    .clearCookie("refereshToken", options)
+    .json(new apiResponse(200,{}, "user logged out"))
+})
 
 
-export {registerUser};
+export {
+    registerUser,
+    loginUser,
+    logoutUser
+
+};

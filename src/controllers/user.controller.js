@@ -25,20 +25,21 @@ const registerUser = asyncHandler( async (req, res) =>{
     })
     if(existerdUser) throw new apiError(409,"this user is existing")
     const avatarLocalPath = req.files?.avatar[0]?.path;
-    console.log(avatarLocalPath)
-    const coverImageLocalPath = req.files?.coverImage[0]?.path
-    console.log(coverImageLocalPath)
+    //const coverImageLocalPath = req.files?.coverImage[0]?.path
+    let coverImageLocalPath;
+    if(req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0){
+        coverImageLocalPath = req.files.coverImage[0].path;
+    }
     if(!avatarLocalPath){
         throw new apiError(400,"avater is fucking require")
     }
 
     const avatar = await uploadCloudinary(avatarLocalPath)
-    console.log("avatar is ",avatar)
     const coverImage = await uploadCloudinary(coverImageLocalPath)
 
-    // if (!avatar) {
-    //     throw new apiError(400,"avater is require")
-    // }
+    if (!avatar) {
+        throw new apiError(400,"avater is require")
+    }
     
     const user = await User.create({
         fullName,
@@ -58,7 +59,9 @@ const registerUser = asyncHandler( async (req, res) =>{
     return res.status(201).json(
         new apiResponse(200,createdUser,"User register successfully")
     )
+    
 })
+
 
 
 export {registerUser};

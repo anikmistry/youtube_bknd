@@ -10,8 +10,11 @@ const generateAccessAndRefereshTokens = async(userId) =>
         const user = await User.findOne(userId)
         const accessToken = user.generateAccessToken()
         const refereshToken = user.generateRefreshToken()
-        user.refereshToken = refereshToken
+        console.log("refreshtoken",refereshToken)
+        user.refereshToken = refereshToken;
+        console.log("baler matha",user)
         await user.save({ validateBeforeSave : false })
+        console.log(user)
         return {accessToken, refereshToken}
     } catch (error) {
         throw new apiError(500,"your are fucked up while generating access token and referesh token")
@@ -83,7 +86,8 @@ const loginUser = asyncHandler(async (req,res) =>{
     //create access token and refresh token
     //send cookie
     const {email,username,password} = req.body;
-    if(!email || !username){
+    console.log(email)
+    if(!email && !username){
         throw new apiError(400,"Email or username is require")
     }
     const user = await User.findOne({
@@ -91,7 +95,7 @@ const loginUser = asyncHandler(async (req,res) =>{
     })
     if(!user) throw new apiError(404,"user does not exist");
 
-    const isPasswordValid = await user.isPasswordCorrecta(password)
+    const isPasswordValid = await user.isPasswordCorrect(password)
     if(!isPasswordValid) throw new apiError(401,"Invalid user password");
 
     const {accessToken, refereshToken} = await generateAccessAndRefereshTokens(user._id)

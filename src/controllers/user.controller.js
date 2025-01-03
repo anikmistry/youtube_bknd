@@ -318,7 +318,7 @@ const getUserChannelProfile = asyncHandler(async(req, res) =>{
 
     if(!username?.trim) throw new apiError(400,"user name is missing");
 
-    const channel = await User.aggregate([
+    const channel = await User.aggregate([ 
         {
             $match: {
                 username: username?.toLowerCase()
@@ -353,7 +353,7 @@ const getUserChannelProfile = asyncHandler(async(req, res) =>{
                     $cond: {
                         if:{$in: [req.user?._id, "$subscribers.subscriber"]},
                         then: true,
-                        else: true
+                        else: false
                     }
                 }
             }
@@ -384,6 +384,58 @@ const getUserChannelProfile = asyncHandler(async(req, res) =>{
     )
 })
 
+const getWatchHistry = asyncHandler(async (req,res) =>{
+    const user = await User.aggregate([
+        {
+            _id: new mongoose.Types.ObjectId(req.user_id)
+        },
+        {
+            $lookup: {
+                from: "videos",
+                localField: "watchHistory",
+                foreignField: "_id",
+                as: "watchHistory",
+                pipeline: [
+                    {
+                        $lookup: {
+                            from: "users",
+                            localField: "owner",
+                            foreignField: "_id",
+                            as: "owner",
+                            pipeline: [
+                            {
+                                fullName: 1,
+                                username: 1,
+                                avatar: 1
+                            }
+                            ]
+                        }
+                    },
+                    {
+                        $addFields:{
+                            owner:{
+                                $first: "$owner",
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    ])
+
+    return res
+    .status(200)
+    .json(
+        new apiResponse(
+            200,
+            user[0].watchHistory,
+            "Watch history fetched successfully"
+        )
+    )
+
+    
+})
+
 export {
     registerUser,
     loginUser,
@@ -394,6 +446,7 @@ export {
     updateAccoutDetails,
     updateUserAvatar,
     updateUserCoverImage,
-    getUserChannelProfile
+    getUserChannelProfile,
+    getWatchHistry
 
 };

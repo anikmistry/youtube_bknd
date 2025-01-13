@@ -45,6 +45,8 @@ router.route("/cover-image").patch(verifyJWT,upload.single("coverImage"),updateU
 router.route("/c/:username").get(verifyJWT,getUserChannelProfile)
 router.route("/history").get(verifyJWT,getWatchHistry)
 
+//anik is a good boy
+
 
 
 export default router;
